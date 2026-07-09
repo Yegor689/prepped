@@ -10,7 +10,7 @@ while items remain unfinished, the app sends a local notification. Completed
 checklists are hidden from the home list but reachable via **All Lists**.
 
 Built with **SwiftUI + SwiftData**, targeting the `Prepped` target
-(iOS 27 deployment). See [MODEL.md](MODEL.md) for the data layer in detail.
+(iOS 18 deployment). See [MODEL.md](MODEL.md) for the data layer in detail.
 
 ---
 

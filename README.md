@@ -35,8 +35,8 @@ updates — a store that can't open is backed up, never deleted.
 
 ## Requirements
 
-- iOS 27 or later
-- Xcode 27 or later
+- iOS 18 or later
+- Xcode 26 or later
 
 ## Getting Started
 
