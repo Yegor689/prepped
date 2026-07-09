@@ -14,6 +14,10 @@ struct BackspaceTextField: UIViewRepresentable {
     var isDimmed: Bool = false
     /// Called when the user hits delete/backspace while the field is empty.
     var onDeleteBackwardWhenEmpty: () -> Void = {}
+    /// Called when the user hits Return. Returning `true` means a new row was
+    /// inserted and focus was handed off elsewhere, so this field should NOT
+    /// resign; returning `false` just dismisses as usual.
+    var onReturn: () -> Bool = { false }
     /// Reports the live UITextField as it's created/torn down, so a caller can
     /// hand focus directly to a specific row's field (e.g. the previous item,
     /// to keep the keyboard up across a delete) without going through
@@ -31,14 +35,15 @@ struct BackspaceTextField: UIViewRepresentable {
         // Match a plain SwiftUI TextField's sizing behavior inside a List row.
         field.setContentHuggingPriority(.defaultLow, for: .horizontal)
         field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        field.returnKeyType = .done
+        field.returnKeyType = .next
         onFieldAvailable(field)
         return field
     }
 
     func updateUIView(_ field: DeleteReportingTextField, context: Context) {
-        // Keep the latest closure so it captures current SwiftUI state.
+        // Keep the latest closures so they capture current SwiftUI state.
         field.onDeleteBackwardWhenEmpty = onDeleteBackwardWhenEmpty
+        context.coordinator.parent = self
         if field.text != text {
             field.text = text
         }
@@ -72,7 +77,7 @@ struct BackspaceTextField: UIViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     final class Coordinator: NSObject, UITextFieldDelegate {
-        let parent: BackspaceTextField
+        var parent: BackspaceTextField
         init(_ parent: BackspaceTextField) { self.parent = parent }
 
         @objc func textChanged(_ field: UITextField) {
@@ -80,7 +85,12 @@ struct BackspaceTextField: UIViewRepresentable {
         }
 
         func textFieldShouldReturn(_ field: UITextField) -> Bool {
-            field.resignFirstResponder()
+            // If a new row was inserted and focused, this field is about to
+            // lose first responder to it — don't also resign, which would
+            // race and drop the keyboard.
+            if !parent.onReturn() {
+                field.resignFirstResponder()
+            }
             return true
         }
     }

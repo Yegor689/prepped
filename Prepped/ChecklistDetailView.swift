@@ -13,9 +13,14 @@ struct ChecklistDetailView: View {
     @State private var editMode: EditMode = .inactive
     @FocusState private var addFieldFocused: Bool
     @State private var celebrate = false
-    /// Live UITextField per item, so backspace-delete can hand focus to the
-    /// previous row before removing the current one (keeps the keyboard up).
+    /// Live UITextField per item, so backspace-delete and Return-to-insert can
+    /// hand focus to a specific row directly (keeps the keyboard up across a
+    /// SwiftData mutation, which SwiftUI's per-row @FocusState can't do for a
+    /// dynamic ForEach).
     @State private var itemFields: [UUID: UITextField] = [:]
+    /// An item whose field should become first responder the moment it's
+    /// created (used right after inserting a new row via Return).
+    @State private var pendingFocusItemID: UUID?
 
     private var tint: Color { checklist.color.color }
 
@@ -288,34 +293,62 @@ struct ChecklistDetailView: View {
                 strikethrough: item.isDone,
                 isDimmed: item.isDone,
                 onDeleteBackwardWhenEmpty: { deleteItem(item) },
+                onReturn: { insertItem(after: item) },
                 onFieldAvailable: { field in
                     itemFields[item.id] = field
+                    if let field, pendingFocusItemID == item.id {
+                        pendingFocusItemID = nil
+                        field.becomeFirstResponder()
+                    }
                 }
             )
         }
     }
 
+    /// Insert a new blank item directly after `item` (within the active
+    /// group), so pressing Return mid-list adds an entry there instead of only
+    /// at the bottom. Renumbers `order` for everything after the insertion
+    /// point, then marks the new item to receive focus once its field exists.
+    /// Returns `true` to tell the caller a new row now owns focus.
+    private func insertItem(after item: Item) -> Bool {
+        var group = activeItems
+        guard let index = group.firstIndex(where: { $0.id == item.id }) else { return false }
+
+        let newItem = Item(title: "", order: 0, checklist: checklist)
+        context.insert(newItem)
+        group.insert(newItem, at: index + 1)
+        for (i, entry) in group.enumerated() { entry.order = i }
+
+        pendingFocusItemID = newItem.id
+        NotificationManager.shared.reschedule(for: checklist)
+        return true
+    }
+
     /// Remove a single item (used by backspace-on-empty). Hands focus to the
-    /// previous item's field *before* deleting, so the keyboard stays up
-    /// instead of dropping when the focused row disappears — landing the
-    /// cursor at the end of the item above, like Notes/Reminders.
+    /// previous item's field *before* deleting, deferring the actual SwiftData
+    /// removal to the next runloop turn — deleting immediately tears down the
+    /// row (and its UITextField) on the same turn UIKit is still processing
+    /// the focus change, which drops the keyboard instead of moving it.
     private func deleteItem(_ item: Item) {
         let group = item.isDone ? doneItems : activeItems
-        if let index = group.firstIndex(where: { $0.id == item.id }), index > 0 {
-            let previous = group[index - 1]
-            if let field = itemFields[previous.id] {
-                field.becomeFirstResponder()
-                let end = field.endOfDocument
-                field.selectedTextRange = field.textRange(from: end, to: end)
-            }
+        let index = group.firstIndex(where: { $0.id == item.id })
+        let previous = index.flatMap { $0 > 0 ? group[$0 - 1] : nil }
+
+        if let previous, let field = itemFields[previous.id] {
+            field.becomeFirstResponder()
+            let end = field.endOfDocument
+            field.selectedTextRange = field.textRange(from: end, to: end)
         } else {
             // No item above — fall back to the add-item field so the
             // keyboard still stays up.
             addFieldFocused = true
         }
+
         itemFields[item.id] = nil
-        context.delete(item)
-        NotificationManager.shared.reschedule(for: checklist)
+        DispatchQueue.main.async {
+            context.delete(item)
+            NotificationManager.shared.reschedule(for: checklist)
+        }
     }
 
     private func toggle(_ item: Item) {
