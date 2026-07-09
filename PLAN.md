@@ -81,7 +81,7 @@ Shared UI: `ProgressRing.swift`, `ListColor.swift`. Notifications:
 ---
 
 ## Verification
-- Build: `xcodebuild -project "Untitled Project.xcodeproj" -scheme Prepped
+- Build: `xcodebuild -project "Prepped.xcodeproj" -scheme Prepped
   -destination 'platform=iOS Simulator,name=iPhone 17'`.
 - Manual: create a list (pick a color) → add several items in a row → check them
   off → confirm the complete prompt → it leaves home and appears under

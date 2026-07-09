@@ -33,9 +33,9 @@ See [PLAN.md](PLAN.md) for the full feature/status breakdown and
 
 ## Build
 
-Open `Untitled Project.xcodeproj` in Xcode, or from the command line:
+Open `Prepped.xcodeproj` in Xcode, or from the command line:
 
 ```sh
-xcodebuild -project "Untitled Project.xcodeproj" -scheme Prepped \
+xcodebuild -project "Prepped.xcodeproj" -scheme Prepped \
   -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
