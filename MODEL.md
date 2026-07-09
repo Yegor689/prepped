@@ -6,9 +6,9 @@ container, and how the model drives notifications. It is the reference for
 anyone changing storage, adding fields, or reasoning about persistence
 behavior.
 
-Source of truth: [MyApp/Models.swift](MyApp/Models.swift). Container setup lives
-in [MyApp/ContentView.swift](MyApp/ContentView.swift); the color type in
-[MyApp/ListColor.swift](MyApp/ListColor.swift).
+Source of truth: [Prepped/Models.swift](Prepped/Models.swift). Container setup lives
+in [Prepped/ContentView.swift](Prepped/ContentView.swift); the color type in
+[Prepped/ListColor.swift](Prepped/ListColor.swift).
 
 ---
 
@@ -132,7 +132,7 @@ sort key alone:
 ## Persistence & the container
 
 Configured explicitly in the app entry point
-([MyApp/ContentView.swift](MyApp/ContentView.swift)):
+([Prepped/ContentView.swift](Prepped/ContentView.swift)):
 
 ```swift
 let schema = Schema([Checklist.self, Item.self])
@@ -209,7 +209,7 @@ Views read via SwiftData `@Query`:
 
 ## `ListColor`
 
-A small closed enum ([MyApp/ListColor.swift](MyApp/ListColor.swift)) of eight
+A small closed enum ([Prepped/ListColor.swift](Prepped/ListColor.swift)) of eight
 cases — `blue, teal, green, orange, pink, purple, indigo, gray` — each mapping
 to a SwiftUI `Color`. Stored on `Checklist` as `colorName` (the raw string) so
 the persisted value is stable and SwiftData-friendly; `Checklist.color` maps it
@@ -219,7 +219,7 @@ back, defaulting to `.blue` for any unrecognized value.
 
 ## How the model drives notifications
 
-`NotificationManager` ([MyApp/NotificationManager.swift](MyApp/NotificationManager.swift))
+`NotificationManager` ([Prepped/NotificationManager.swift](Prepped/NotificationManager.swift))
 derives everything it needs from the model — it stores nothing itself:
 
 - **Fire time** = the due day minus `reminderLeadDays`, set to **9:00 AM**
@@ -240,7 +240,7 @@ on app foreground.
 
 ## Change checklist (when editing the model)
 
-1. Edit [MyApp/Models.swift](MyApp/Models.swift); update this document.
+1. Edit [Prepped/Models.swift](Prepped/Models.swift); update this document.
 2. **Give any new stored property a default value** (`= …`). This keeps the
    change additive so SwiftData migrates the store automatically and **existing
    data is preserved** — no reset. Skipping the default risks an open failure.

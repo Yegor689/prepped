@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-@main struct MyApp: App {
+@main struct PreppedApp: App {
     let container: ModelContainer
 
     init() {

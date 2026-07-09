@@ -36,9 +36,6 @@ See [PLAN.md](PLAN.md) for the full feature/status breakdown and
 Open `Untitled Project.xcodeproj` in Xcode, or from the command line:
 
 ```sh
-xcodebuild -project "Untitled Project.xcodeproj" -scheme MyApp \
+xcodebuild -project "Untitled Project.xcodeproj" -scheme Prepped \
   -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
-
-> The Xcode target is still named `MyApp` (the app's display name is
-> **Prepped**). A cosmetic rename is on the backlog.

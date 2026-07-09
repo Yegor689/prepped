@@ -9,7 +9,7 @@ vacation was the original example, but the concept is generic). Each
 while items remain unfinished, the app sends a local notification. Completed
 checklists are hidden from the home list but reachable via **All Lists**.
 
-Built with **SwiftUI + SwiftData**, targeting the existing `MyApp` target
+Built with **SwiftUI + SwiftData**, targeting the `Prepped` target
 (iOS 27 deployment). See [MODEL.md](MODEL.md) for the data layer in detail.
 
 ---
@@ -46,8 +46,6 @@ Built with **SwiftUI + SwiftData**, targeting the existing `MyApp` target
   variant**, wired via `Assets.xcassets/AppIcon`.
 
 ### Not yet done / backlog
-- **Xcode target still named `MyApp`** — cosmetic rename (builds use
-  `-scheme MyApp`); doesn't affect the user-facing name.
 - **Non-optional `Item.checklist`** — currently optional (SwiftData
   `@Relationship(inverse:)` constraint); orphans are prevented in code.
 - **Versioned migration plan** — additive changes are handled automatically, but
@@ -83,7 +81,7 @@ Shared UI: `ProgressRing.swift`, `ListColor.swift`. Notifications:
 ---
 
 ## Verification
-- Build: `xcodebuild -project "Untitled Project.xcodeproj" -scheme MyApp
+- Build: `xcodebuild -project "Untitled Project.xcodeproj" -scheme Prepped
   -destination 'platform=iOS Simulator,name=iPhone 17'`.
 - Manual: create a list (pick a color) → add several items in a row → check them
   off → confirm the complete prompt → it leaves home and appears under
