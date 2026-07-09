@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+
+# Loose icon source art in the project root (the real icons live in
+# MyApp/Assets.xcassets/AppIcon.appiconset/ and ARE committed).
+/*.png
+
+# Xcode build artifacts
+build/
+DerivedData/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Xcode per-user state (window layout, breakpoints, selected scheme, etc.)
+xcuserdata/
+*.xcuserstate
+*.xcuserdatad
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# SwiftData store backups produced by the app's non-destructive recovery
+default.store.backup-*
