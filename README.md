@@ -8,7 +8,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-iOS-lightgrey" alt="Platform">
-  <img src="https://img.shields.io/badge/swift-6.0-orange" alt="Swift">
+  <img src="https://img.shields.io/badge/swift-5.0-orange" alt="Swift">
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="License">
 </p>
 
@@ -22,24 +22,16 @@ updates — a store that can't open is backed up, never deleted.
 
 ## Why Prepped
 
-- **A list, not a form.** Give it a name and a due date and start typing items —
-  the field stays focused so you can add the whole list in one breath, and
-  pending text saves even if you back out without hitting Return.
-- **Structure that stays out of the way.** Tap the circle to check something
-  off, tap the text to edit it in place, drag to reorder. Finished items sink to
-  the bottom so the top of your list is always what's left to do.
-- **Reminders that reach you.** Choose how far ahead each list nudges you — a
-  day, three days, or a week before — delivered at 9:00 AM as a native
-  notification, and only while items remain unfinished.
-- **Two ways to look at it.** A focused home split into **Overdue** and
-  **Upcoming**, or an **All Lists** view of everything active and completed, with
-  one tap to reopen a finished list.
-- **Done means done.** Marking a list complete with open items warns you first;
-  finishing the last one earns a little celebration. Completed lists leave home
-  but stay one tap away.
-- **Yours to keep.** Persistence is explicit and on-disk. Additive schema
-  changes migrate automatically and preserve your data; if a store ever can't be
-  opened it's moved aside to a timestamped backup rather than wiped.
+- **A list, not a form.** Name it, give it a due date, and type your items —
+  no ceremony.
+- **Reminders that reach you.** Each list nudges you a day, three days, or a
+  week ahead, and only while items are still unfinished.
+- **Two ways to look at it.** A home split into **Overdue** and **Upcoming**, or
+  an **All Lists** view of everything active and completed.
+- **Done means done.** Finished lists leave home but stay one tap away, and
+  reopen whenever you need them.
+- **Yours to keep.** An on-disk store that migrates safely across updates —
+  a store that can't open is backed up, never deleted.
 
 ## Requirements
 
