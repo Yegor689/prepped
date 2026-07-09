@@ -248,14 +248,22 @@ struct ChecklistDetailView: View {
         .padding(.top, 4)
     }
 
+    /// Items split into unchecked/checked, each in manual order, from a single
+    /// sort + partition pass (instead of two independent filter+sort passes
+    /// re-run on every render / keystroke).
+    private var splitItems: (active: [Item], done: [Item]) {
+        var active: [Item] = []
+        var done: [Item] = []
+        for item in checklist.items.sorted(by: { $0.order < $1.order }) {
+            if item.isDone { done.append(item) } else { active.append(item) }
+        }
+        return (active, done)
+    }
+
     // Unchecked items, in manual order.
-    private var activeItems: [Item] {
-        checklist.items.filter { !$0.isDone }.sorted { $0.order < $1.order }
-    }
+    private var activeItems: [Item] { splitItems.active }
     // Checked items, in manual order.
-    private var doneItems: [Item] {
-        checklist.items.filter { $0.isDone }.sorted { $0.order < $1.order }
-    }
+    private var doneItems: [Item] { splitItems.done }
 
     @ViewBuilder
     private func itemRow(_ item: Item) -> some View {

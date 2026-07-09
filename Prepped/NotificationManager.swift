@@ -66,8 +66,28 @@ final class NotificationManager {
         cancel(id: checklist.id.uuidString)
     }
 
-    /// Full resync — call on app foreground as a safety net.
+    /// Full resync — call on app foreground as a safety net. Only touches
+    /// requests that are actually out of sync: reads the currently-pending set
+    /// once, then reschedules a list only when whether-it-should-be-scheduled
+    /// disagrees with reality. Avoids a cancel+add round-trip per list on every
+    /// foreground.
     func rescheduleAll(_ checklists: [Checklist]) {
-        for checklist in checklists { reschedule(for: checklist) }
+        center.getPendingNotificationRequests { [weak self] pending in
+            guard let self else { return }
+            let pendingIDs = Set(pending.map(\.identifier))
+            for checklist in checklists {
+                let id = checklist.id.uuidString
+                let shouldBeScheduled = !checklist.isCompleted
+                    && !checklist.allItemsDone
+                    && checklist.reminderLead != .none
+                let isScheduled = pendingIDs.contains(id)
+                // In sync already — nothing to do.
+                if shouldBeScheduled == isScheduled { continue }
+                // Hop to main: reschedule reads SwiftData model properties.
+                DispatchQueue.main.async {
+                    self.reschedule(for: checklist)
+                }
+            }
+        }
     }
 }

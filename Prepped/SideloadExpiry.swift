@@ -13,19 +13,22 @@ enum SideloadExpiry {
     static let validityDays = 7
 
     /// When this build was produced, inferred from the executable's mod date.
-    static var buildDate: Date? {
+    /// Cached: the executable's date can't change while the app is running, so
+    /// we stat the filesystem once instead of on every view render.
+    static let buildDate: Date? = {
         guard let exec = Bundle.main.executableURL,
               let attrs = try? FileManager.default.attributesOfItem(atPath: exec.path),
               let date = attrs[.modificationDate] as? Date
         else { return nil }
         return date
-    }
+    }()
 
     /// Estimated moment the sideload expires (build date + validity window).
-    static var expiryDate: Date? {
+    /// Cached — derives only from the (fixed) build date.
+    static let expiryDate: Date? = {
         guard let buildDate else { return nil }
         return Calendar.current.date(byAdding: .day, value: validityDays, to: buildDate)
-    }
+    }()
 
     /// Whole days remaining until expiry (0 = expires today, negative = expired).
     static var daysRemaining: Int? {

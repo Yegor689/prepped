@@ -63,7 +63,6 @@ struct ContentView: View {
         filter: #Predicate<Checklist> { !$0.isCompleted },
         sort: \Checklist.dueDate
     ) private var activeChecklists: [Checklist]
-    @Query private var allChecklists: [Checklist]
 
     @State private var showingAdd = false
     @State private var pendingDelete: Checklist?
@@ -136,7 +135,10 @@ struct ContentView: View {
         .onAppear { NotificationManager.shared.requestAuthorization() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                NotificationManager.shared.rescheduleAll(allChecklists)
+                // Fetch on demand instead of continuously observing every list
+                // (incl. completed) just for the foreground resync.
+                let all = (try? context.fetch(FetchDescriptor<Checklist>())) ?? []
+                NotificationManager.shared.rescheduleAll(all)
             }
         }
     }
