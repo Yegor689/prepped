@@ -1,41 +1,70 @@
-# Prepped
+<p align="center">
+  <img src="assets/logo.png" alt="Prepped" width="160">
+</p>
 
-**Checklists for getting ready before a dated event.**
+<h1 align="center">Prepped</h1>
 
-Prepped is an iOS app for **checklists grouped under a due date**. Create a
-list for anything with a deadline — a trip, an event, a move — add items, and
-Prepped sends a local reminder as the date approaches while items are still
-unfinished. Finished lists drop off the home screen but stay reachable under
-**All Lists**.
+<p align="center"><strong>Dated checklists that remind you before time runs out.</strong></p>
 
-## Features
+<p align="center">
+  <img src="https://img.shields.io/badge/platform-iOS-lightgrey" alt="Platform">
+  <img src="https://img.shields.io/badge/swift-6.0-orange" alt="Swift">
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="License">
+</p>
 
-- **Dated checklists** with a due date, accent color, notes, and items.
-- **Home** shows only active lists, split into **Overdue** and **Upcoming**,
-  each with a progress ring and relative due date.
-- **Inline item editing** — tap the circle to check off, tap the text to edit,
-  drag to reorder (unchecked items float above checked).
-- **Per-list reminders** (none / 1 / 3 / 7 days before), delivered at 9:00 AM,
-  only while items remain unfinished.
-- **Completion flow** — a warning if you complete with open items, plus a
-  celebration when you finish the last one.
-- **All Lists** — active and completed, with the ability to reopen a list.
-- **Light & dark app icon** and app-wide theming.
+Prepped turns anything with a deadline — a trip, an event, a move — into a
+simple checklist with a due date. Add your items, pick a color, and Prepped
+sends a native reminder as the date approaches while things are still
+unfinished. It's a native SwiftUI app: quiet, quick, and built to get out of
+your way. And because losing a list you were counting on is its own small
+disaster, your data lives in an on-disk store that migrates safely across
+updates — a store that can't open is backed up, never deleted.
 
-## Tech
+## Why Prepped
 
-SwiftUI + SwiftData, targeting iOS 27. Persistence is an explicit, on-disk
-`ModelContainer`; additive schema changes migrate automatically and preserve
-data (a store that can't open is backed up, not deleted).
+- **A list, not a form.** Give it a name and a due date and start typing items —
+  the field stays focused so you can add the whole list in one breath, and
+  pending text saves even if you back out without hitting Return.
+- **Structure that stays out of the way.** Tap the circle to check something
+  off, tap the text to edit it in place, drag to reorder. Finished items sink to
+  the bottom so the top of your list is always what's left to do.
+- **Reminders that reach you.** Choose how far ahead each list nudges you — a
+  day, three days, or a week before — delivered at 9:00 AM as a native
+  notification, and only while items remain unfinished.
+- **Two ways to look at it.** A focused home split into **Overdue** and
+  **Upcoming**, or an **All Lists** view of everything active and completed, with
+  one tap to reopen a finished list.
+- **Done means done.** Marking a list complete with open items warns you first;
+  finishing the last one earns a little celebration. Completed lists leave home
+  but stay one tap away.
+- **Yours to keep.** Persistence is explicit and on-disk. Additive schema
+  changes migrate automatically and preserve your data; if a store ever can't be
+  opened it's moved aside to a timestamped backup rather than wiped.
 
-See [PLAN.md](PLAN.md) for the full feature/status breakdown and
-[MODEL.md](MODEL.md) for the data-layer reference.
+## Requirements
 
-## Build
+- iOS 27 or later
+- Xcode 27 or later
 
-Open `Prepped.xcodeproj` in Xcode, or from the command line:
+## Getting Started
 
-```sh
-xcodebuild -project "Prepped.xcodeproj" -scheme Prepped \
-  -destination 'platform=iOS Simulator,name=iPhone 17' build
+```bash
+git clone https://github.com/Yegor689/prepped.git
 ```
+
+Open `Prepped.xcodeproj` in Xcode and run (⌘R). No dependencies, no setup —
+pure SwiftUI and SwiftData.
+
+## Architecture
+
+The app is a SwiftUI `NavigationStack` over a SwiftData store. Two `@Model`
+types — `Checklist` and its child `Item`s — back `@Query`-driven views, with
+`NotificationManager` handling reminder scheduling as a side effect of model
+changes. The container is explicit and disk-backed: additive migrations happen
+automatically, and a store that can't open is backed up rather than deleted. See
+[MODEL.md](MODEL.md) for the data model and [PLAN.md](PLAN.md) for the feature
+breakdown.
+
+## License
+
+MIT
