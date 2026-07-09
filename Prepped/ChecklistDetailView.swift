@@ -77,6 +77,9 @@ struct ChecklistDetailView: View {
                         .buttonStyle(.bordered)
                         .buttonBorderShape(.capsule)
                         .tint(tint)
+                        // Not tappable while typing a new item, so a tap meant to
+                        // dismiss the keyboard can't accidentally complete the list.
+                        .disabled(addFieldFocused)
                         Spacer()
                     }
                     .listRowBackground(Color.clear)
@@ -100,6 +103,14 @@ struct ChecklistDetailView: View {
         .navigationBarTitleDisplayMode(.large)
         .tint(tint)
         .environment(\.editMode, $editMode)
+        .scrollDismissesKeyboard(.interactively)
+        // Tap anywhere in the list (empty space, rows) to dismiss the keyboard.
+        // simultaneousGesture lets row taps/buttons still work.
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                if addFieldFocused { addFieldFocused = false }
+            }
+        )
         .onDisappear { addItem(keepFocus: false) }
         .overlay {
             if celebrate {
