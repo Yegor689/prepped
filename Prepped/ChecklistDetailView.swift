@@ -269,14 +269,23 @@ struct ChecklistDetailView: View {
             }
             .buttonStyle(.plain)
 
-            // Tap the text to edit it inline; edits autosave.
-            TextField("Item", text: Binding(
-                get: { item.title },
-                set: { item.title = $0 }
-            ))
-            .strikethrough(item.isDone)
-            .foregroundStyle(item.isDone ? .secondary : .primary)
+            // Tap the text to edit it inline; edits autosave. Backspacing on an
+            // already-empty item deletes the row.
+            BackspaceTextField(
+                placeholder: "Item",
+                text: Binding(get: { item.title }, set: { item.title = $0 }),
+                strikethrough: item.isDone,
+                isDimmed: item.isDone,
+                onDeleteBackwardWhenEmpty: { deleteItem(item) }
+            )
         }
+    }
+
+    /// Remove a single item (used by backspace-on-empty). Reschedules reminders
+    /// since removing an item can change whether work remains.
+    private func deleteItem(_ item: Item) {
+        context.delete(item)
+        NotificationManager.shared.reschedule(for: checklist)
     }
 
     private func toggle(_ item: Item) {
