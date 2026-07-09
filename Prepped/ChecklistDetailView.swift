@@ -13,6 +13,9 @@ struct ChecklistDetailView: View {
     @State private var editMode: EditMode = .inactive
     @FocusState private var addFieldFocused: Bool
     @State private var celebrate = false
+    /// Live UITextField per item, so backspace-delete can hand focus to the
+    /// previous row before removing the current one (keeps the keyboard up).
+    @State private var itemFields: [UUID: UITextField] = [:]
 
     private var tint: Color { checklist.color.color }
 
@@ -284,14 +287,33 @@ struct ChecklistDetailView: View {
                 text: Binding(get: { item.title }, set: { item.title = $0 }),
                 strikethrough: item.isDone,
                 isDimmed: item.isDone,
-                onDeleteBackwardWhenEmpty: { deleteItem(item) }
+                onDeleteBackwardWhenEmpty: { deleteItem(item) },
+                onFieldAvailable: { field in
+                    itemFields[item.id] = field
+                }
             )
         }
     }
 
-    /// Remove a single item (used by backspace-on-empty). Reschedules reminders
-    /// since removing an item can change whether work remains.
+    /// Remove a single item (used by backspace-on-empty). Hands focus to the
+    /// previous item's field *before* deleting, so the keyboard stays up
+    /// instead of dropping when the focused row disappears — landing the
+    /// cursor at the end of the item above, like Notes/Reminders.
     private func deleteItem(_ item: Item) {
+        let group = item.isDone ? doneItems : activeItems
+        if let index = group.firstIndex(where: { $0.id == item.id }), index > 0 {
+            let previous = group[index - 1]
+            if let field = itemFields[previous.id] {
+                field.becomeFirstResponder()
+                let end = field.endOfDocument
+                field.selectedTextRange = field.textRange(from: end, to: end)
+            }
+        } else {
+            // No item above — fall back to the add-item field so the
+            // keyboard still stays up.
+            addFieldFocused = true
+        }
+        itemFields[item.id] = nil
         context.delete(item)
         NotificationManager.shared.reschedule(for: checklist)
     }

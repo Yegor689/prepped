@@ -14,6 +14,11 @@ struct BackspaceTextField: UIViewRepresentable {
     var isDimmed: Bool = false
     /// Called when the user hits delete/backspace while the field is empty.
     var onDeleteBackwardWhenEmpty: () -> Void = {}
+    /// Reports the live UITextField as it's created/torn down, so a caller can
+    /// hand focus directly to a specific row's field (e.g. the previous item,
+    /// to keep the keyboard up across a delete) without going through
+    /// SwiftUI's per-row @FocusState, which can't target a dynamic ForEach row.
+    var onFieldAvailable: (UITextField?) -> Void = { _ in }
 
     func makeUIView(context: Context) -> DeleteReportingTextField {
         let field = DeleteReportingTextField()
@@ -27,6 +32,7 @@ struct BackspaceTextField: UIViewRepresentable {
         field.setContentHuggingPriority(.defaultLow, for: .horizontal)
         field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         field.returnKeyType = .done
+        onFieldAvailable(field)
         return field
     }
 
@@ -37,6 +43,10 @@ struct BackspaceTextField: UIViewRepresentable {
             field.text = text
         }
         applyStyle(to: field)
+    }
+
+    static func dismantleUIView(_ field: DeleteReportingTextField, coordinator: Coordinator) {
+        coordinator.parent.onFieldAvailable(nil)
     }
 
     private func applyStyle(to field: UITextField) {
