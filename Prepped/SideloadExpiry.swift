@@ -35,45 +35,143 @@ enum SideloadExpiry {
         let end = cal.startOfDay(for: expiryDate)
         return cal.dateComponents([.day], from: start, to: end).day
     }
+
+    /// The exact expiry moment, e.g. "Wed, Jul 15, 2026 at 3:42 PM".
+    static var expiryDescription: String? {
+        expiryDate?.formatted(.dateTime.weekday(.abbreviated).month().day().year().hour().minute())
+    }
+
+    /// When this build was installed/signed, e.g. "Jul 8, 2026".
+    static var buildDescription: String? {
+        buildDate?.formatted(.dateTime.month().day().year())
+    }
+}
+
+/// Presentation for a given days-remaining value, shared by the banner and the
+/// detail screen so the color, icon, and headline stay consistent.
+private struct ExpiryStatus {
+    let color: Color
+    let icon: String
+    let headline: String
+
+    init(days: Int) {
+        switch days {
+        case ..<0:
+            color = .red
+            icon = "exclamationmark.triangle.fill"
+            headline = "Sideload expired"
+        case 0:
+            color = .red
+            icon = "exclamationmark.triangle.fill"
+            headline = "Sideload expires today"
+        case 1:
+            color = .orange
+            icon = "exclamationmark.triangle.fill"
+            headline = "Sideload expires tomorrow"
+        case 2:
+            color = .orange
+            icon = "clock.badge.checkmark"
+            headline = "Sideload expires in 2 days"
+        default:
+            color = .secondary
+            icon = "clock.badge.checkmark"
+            headline = "Sideload expires in \(days) days"
+        }
+    }
 }
 
 /// Compact banner surfacing how long until the free-account sideload expires.
-/// Stays quiet (green/secondary) most of the week and escalates to orange/red
-/// as the deadline nears so it's easy to ignore until it matters.
+/// Stays quiet (secondary) most of the week and escalates to orange/red as the
+/// deadline nears. Tapping it opens the detail screen with the exact date.
 struct SideloadExpiryBanner: View {
     var body: some View {
         if let days = SideloadExpiry.daysRemaining {
-            HStack(spacing: 8) {
-                Image(systemName: icon(for: days))
-                Text(message(for: days))
-                    .font(.footnote.weight(.medium))
-                Spacer(minLength: 0)
+            let status = ExpiryStatus(days: days)
+            NavigationLink {
+                SideloadExpiryDetailView()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: status.icon)
+                    Text(status.headline)
+                        .font(.footnote.weight(.medium))
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .opacity(0.6)
+                }
+                .foregroundStyle(status.color)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(status.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+                .contentShape(RoundedRectangle(cornerRadius: 10))
             }
-            .foregroundStyle(color(for: days))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(color(for: days).opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+            .buttonStyle(.plain)
         }
     }
+}
 
-    private func message(for days: Int) -> String {
-        switch days {
-        case ..<0:  return "Sideload expired — reinstall from Xcode"
-        case 0:     return "Sideload expires today — reinstall soon"
-        case 1:     return "Sideload expires tomorrow"
-        default:    return "Sideload expires in \(days) days"
+/// Detail screen explaining the free-account 7-day sideload limit: the exact
+/// date the app stops launching, when this build was signed, and how to renew.
+struct SideloadExpiryDetailView: View {
+    var body: some View {
+        List {
+            if let days = SideloadExpiry.daysRemaining {
+                let status = ExpiryStatus(days: days)
+
+                Section {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 10) {
+                            Image(systemName: status.icon)
+                                .font(.title2)
+                            Text(status.headline)
+                                .font(.headline)
+                        }
+                        .foregroundStyle(status.color)
+
+                        if let expiry = SideloadExpiry.expiryDescription {
+                            Text("The app stops launching on \(expiry).")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                Section("Details") {
+                    LabeledContent("Days remaining",
+                                   value: days < 0 ? "Expired" : "\(days)")
+                    if let expiry = SideloadExpiry.expiryDescription {
+                        LabeledContent("Stops working", value: expiry)
+                    }
+                    if let build = SideloadExpiry.buildDescription {
+                        LabeledContent("Installed", value: build)
+                    }
+                    LabeledContent("Valid for", value: "\(SideloadExpiry.validityDays) days")
+                }
+            } else {
+                Section {
+                    Text("Expiry can't be determined for this build.")
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section {
+                Text("""
+                Apps installed with a free Apple ID are only signed for \
+                \(SideloadExpiry.validityDays) days. After that, iOS refuses to \
+                open the app until it's reinstalled.
+
+                To reset the timer, reconnect this device to the Mac it was \
+                installed from and run the app again from Xcode. Reinstalling \
+                over the top keeps all your lists — don't delete the app first.
+                """)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            } header: {
+                Text("Why this happens")
+            }
         }
-    }
-
-    private func icon(for days: Int) -> String {
-        days <= 1 ? "exclamationmark.triangle.fill" : "clock.badge.checkmark"
-    }
-
-    private func color(for days: Int) -> Color {
-        switch days {
-        case ..<1:  return .red
-        case 1...2: return .orange
-        default:    return .secondary
-        }
+        .navigationTitle("Sideload")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
