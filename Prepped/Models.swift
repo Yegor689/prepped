@@ -131,3 +131,46 @@ final class Item {
         self.checklist = checklist
     }
 }
+
+/// A reusable named set of item titles. Not a checklist — it has no due date
+/// and its items can't be completed. A new `Checklist` is spun up *from* a
+/// template (copying its item titles) when the user needs one.
+@Model
+final class ListTemplate {
+    var id: UUID = UUID()
+    var name: String = ""
+    var colorName: String = ListColor.blue.rawValue
+    var createdAt: Date = Date.now
+
+    @Relationship(deleteRule: .cascade, inverse: \TemplateItem.template)
+    var items: [TemplateItem]
+
+    init(name: String, colorName: String = ListColor.blue.rawValue) {
+        self.id = UUID()
+        self.name = name
+        self.colorName = colorName
+        self.createdAt = .now
+        self.items = []
+    }
+
+    var color: ListColor { ListColor(rawValue: colorName) ?? .blue }
+    /// Item titles in manual order — the payload copied into a new checklist.
+    var orderedItems: [TemplateItem] { items.sorted { $0.order < $1.order } }
+}
+
+/// A single item title within a `ListTemplate`. No done-state — templates are
+/// blueprints, not working lists.
+@Model
+final class TemplateItem {
+    var id: UUID = UUID()
+    var title: String = ""
+    var order: Int = 0
+    var template: ListTemplate?
+
+    init(title: String, order: Int = 0, template: ListTemplate? = nil) {
+        self.id = UUID()
+        self.title = title
+        self.order = order
+        self.template = template
+    }
+}

@@ -5,7 +5,7 @@ import SwiftData
     let container: ModelContainer
 
     init() {
-        let schema = Schema([Checklist.self, Item.self])
+        let schema = Schema([Checklist.self, Item.self, ListTemplate.self, TemplateItem.self])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         // SwiftData performs automatic lightweight migration for additive changes
@@ -63,9 +63,26 @@ struct ContentView: View {
         filter: #Predicate<Checklist> { !$0.isCompleted },
         sort: \Checklist.dueDate
     ) private var activeChecklists: [Checklist]
+    // Newest first, so the + menu can surface the most recent templates.
+    @Query(sort: \ListTemplate.createdAt, order: .reverse) private var templates: [ListTemplate]
 
     @State private var showingAdd = false
     @State private var pendingDelete: Checklist?
+    /// Template chosen from the + menu to seed a new list.
+    @State private var templateForNewList: ListTemplate?
+    /// Whether the searchable "all templates" picker is showing.
+    @State private var showingTemplatePicker = false
+
+    /// The last release tag whose What's New sheet the user has seen.
+    @AppStorage("lastSeenWhatsNewTag") private var lastSeenWhatsNewTag = ""
+    @State private var showingWhatsNew = false
+
+    /// How many templates to surface directly in the + menu before spilling
+    /// into the full picker.
+    private let menuTemplateLimit = 5
+
+    /// Destinations reachable from the top-left library menu.
+    private enum LibraryDestination: Hashable { case allLists, templates }
 
     var body: some View {
         NavigationStack {
@@ -104,24 +121,80 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Lists")
+            .navigationDestination(for: LibraryDestination.self) { destination in
+                switch destination {
+                case .allLists: AllListsView()
+                case .templates: TemplatesView()
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    NavigationLink {
-                        AllListsView()
+                    Menu {
+                        NavigationLink(value: LibraryDestination.allLists) {
+                            Label("All Lists", systemImage: "tray.full")
+                        }
+                        NavigationLink(value: LibraryDestination.templates) {
+                            Label("Templates", systemImage: "square.on.square")
+                        }
                     } label: {
-                        Label("All Lists", systemImage: "tray.full")
+                        Label("Library", systemImage: "line.3.horizontal")
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showingAdd = true
-                    } label: {
-                        Label("Add List", systemImage: "plus")
+                    if templates.isEmpty {
+                        // No templates yet — + goes straight to a blank list.
+                        Button {
+                            showingAdd = true
+                        } label: {
+                            Label("Add List", systemImage: "plus")
+                        }
+                    } else {
+                        Menu {
+                            Button {
+                                showingAdd = true
+                            } label: {
+                                Label("Blank List", systemImage: "plus")
+                            }
+                            Section("From Template") {
+                                // Only the most recent few; the rest live in the
+                                // searchable picker to keep the menu short.
+                                ForEach(templates.prefix(menuTemplateLimit)) { template in
+                                    Button {
+                                        templateForNewList = template
+                                    } label: {
+                                        Label(template.name, systemImage: "square.on.square")
+                                    }
+                                }
+                                if templates.count > menuTemplateLimit {
+                                    Button {
+                                        showingTemplatePicker = true
+                                    } label: {
+                                        Label("More Templates…", systemImage: "ellipsis")
+                                    }
+                                }
+                            }
+                        } label: {
+                            Label("Add List", systemImage: "plus")
+                        }
                     }
                 }
             }
             .sheet(isPresented: $showingAdd) {
                 ChecklistFormView()
+            }
+            .sheet(item: $templateForNewList) { template in
+                ChecklistFormView(template: template)
+            }
+            .sheet(isPresented: $showingTemplatePicker) {
+                TemplatePickerView { chosen in
+                    // Wait for the picker's dismiss animation to finish before
+                    // presenting the prefill form — presenting a sheet while
+                    // another is still animating out can silently drop the new
+                    // one.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        templateForNewList = chosen
+                    }
+                }
             }
             .confirmationDialog(
                 "Delete this list?",
@@ -140,7 +213,21 @@ struct ContentView: View {
                 Text("\(checklist.name) and its \(checklist.totalItemCount) item(s) will be permanently deleted.")
             }
         }
-        .onAppear { NotificationManager.shared.requestAuthorization() }
+        .sheet(isPresented: $showingWhatsNew) {
+            WhatsNewView()
+        }
+        .onAppear {
+            NotificationManager.shared.requestAuthorization()
+            // Show What's New once per release. Skip on a fresh install (no tag
+            // seen yet) so new users aren't greeted with a changelog — just
+            // mark the current release as seen.
+            if lastSeenWhatsNewTag.isEmpty {
+                lastSeenWhatsNewTag = WhatsNew.releaseTag
+            } else if lastSeenWhatsNewTag != WhatsNew.releaseTag {
+                showingWhatsNew = true
+                lastSeenWhatsNewTag = WhatsNew.releaseTag
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 // Fetch on demand instead of continuously observing every list
@@ -245,5 +332,5 @@ struct ChecklistRow: View {
 
 #Preview {
     ContentView()
-        .modelContainer(for: [Checklist.self, Item.self], inMemory: true)
+        .modelContainer(for: [Checklist.self, Item.self, ListTemplate.self, TemplateItem.self], inMemory: true)
 }

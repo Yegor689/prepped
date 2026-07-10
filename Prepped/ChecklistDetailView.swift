@@ -73,13 +73,6 @@ struct ChecklistDetailView: View {
         .tint(tint)
         .environment(\.editMode, $editMode)
         .scrollDismissesKeyboard(.interactively)
-        // Tap anywhere in the list (empty space, rows) to dismiss the keyboard.
-        // simultaneousGesture lets row taps/buttons still work.
-        .simultaneousGesture(
-            TapGesture().onEnded {
-                if addFieldFocused { addFieldFocused = false }
-            }
-        )
         .onDisappear { addItem(keepFocus: false) }
         .overlay {
             if celebrate {
@@ -141,6 +134,15 @@ struct ChecklistDetailView: View {
                     .disabled(checklist.items.isEmpty)
                 } label: {
                     Image(systemName: "ellipsis.circle")
+                }
+            }
+            // Explicit keyboard dismissal — reliable, and no tap gesture on the
+            // list competing with fields (which caused multi-tap-to-focus).
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    addFieldFocused = false
+                    for field in itemFields.values { field.resignFirstResponder() }
                 }
             }
         }

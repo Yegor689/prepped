@@ -1,12 +1,14 @@
 import SwiftUI
 import SwiftData
 
-/// Add or edit a checklist. Pass `existing` to edit; omit to create.
+/// Add or edit a checklist. Pass `existing` to edit; omit to create. Pass
+/// `template` to prefill a new list from a template (name + color + items).
 struct ChecklistFormView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
 
     var existing: Checklist?
+    var template: ListTemplate?
 
     @State private var name = ""
     @State private var notes = ""
@@ -77,7 +79,7 @@ struct ChecklistFormView: View {
                         .lineLimit(3, reservesSpace: true)
                 }
             }
-            .navigationTitle(isEditing ? "Edit List" : "New List")
+            .navigationTitle(isEditing ? "Edit List" : (template != nil ? "New List from Template" : "New List"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -93,13 +95,19 @@ struct ChecklistFormView: View {
     }
 
     private func populate() {
-        guard let existing else { return }
-        name = existing.name
-        notes = existing.notes
-        dueDate = existing.dueDate
-        hasTime = existing.hasTime
-        color = existing.color
-        reminderLead = existing.reminderLead
+        if let existing {
+            name = existing.name
+            notes = existing.notes
+            dueDate = existing.dueDate
+            hasTime = existing.hasTime
+            color = existing.color
+            reminderLead = existing.reminderLead
+        } else if let template {
+            // New list seeded from a template: carry over name + color; items
+            // are copied in save().
+            name = template.name
+            color = template.color
+        }
     }
 
     private func save() {
@@ -122,6 +130,13 @@ struct ChecklistFormView: View {
                                       colorName: color.rawValue,
                                       reminderLeadDays: reminderLead.rawValue)
             context.insert(checklist)
+            // Seed items from the template, preserving order.
+            if let template {
+                for (i, templateItem) in template.orderedItems.enumerated() {
+                    let item = Item(title: templateItem.title, order: i, checklist: checklist)
+                    context.insert(item)
+                }
+            }
             target = checklist
         }
         NotificationManager.shared.reschedule(for: target)
