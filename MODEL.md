@@ -39,7 +39,8 @@ is no networking or sync layer.
 | `id`            | `UUID`      | Stable identity; also used as the notification request identifier. |
 | `name`          | `String`    | User-facing title. |
 | `notes`         | `String`    | Optional free text (defaults to `""`). |
-| `dueDate`       | `Date`      | When the list is due; drives sorting, overdue state, and the reminder time. |
+| `dueDate`       | `Date`      | When the list is due; drives sorting, overdue state, and the reminder time. Pinned to start-of-day when `hasTime` is false. |
+| `hasTime`       | `Bool`      | Whether `dueDate`'s time-of-day is meaningful. `false` (default) = due "that day": overdue by calendar day, reminders at 9 AM. `true` = exact time: overdue is an instant comparison and reminders fire at that time. |
 | `createdAt`     | `Date`      | Set to `.now` at init. |
 | `isCompleted`   | `Bool`      | Manual "done" flag. `true` hides the list from Home; it remains in All Lists. |
 | `colorName`     | `String`    | Raw value of a `ListColor` case; drives the accent. Defaults to `blue`. |
@@ -47,8 +48,9 @@ is no networking or sync layer.
 
 **Initializer**
 ```swift
-init(name: String, notes: String = "", dueDate: Date,
-     colorName: String = ListColor.blue.rawValue)
+init(name: String, notes: String = "", dueDate: Date, hasTime: Bool = false,
+     colorName: String = ListColor.blue.rawValue,
+     reminderLeadDays: Int = ReminderLead.oneDay.rawValue)
 ```
 `id`, `createdAt`, `isCompleted` (`false`), and an empty `items` array are set
 automatically.
@@ -62,8 +64,8 @@ automatically.
 | `completedItemCount` | `Int`    | Count of items where `isDone`. |
 | `allItemsDone`       | `Bool`   | `true` only when there is at least one item and all are done. |
 | `progress`           | `Double` | `completed / total`, or `0` when empty. Range `0...1`. |
-| `isOverdue`          | `Bool`   | `dueDate < now && !allItemsDone` — past due *and* still has open work. |
-| `dueDescription`     | `String` | Day-granular relative phrase: "Due today", "Due tomorrow", "Due in N days", "1 day overdue", "N days overdue". Computed from calendar day boundaries, not raw time intervals. |
+| `isOverdue`          | `Bool`   | Past due *and* still has open work. When `hasTime`, an instant comparison (`dueDate < now`); otherwise by calendar day (`startOfDay(dueDate) < startOfDay(now)`) so a list due *today* isn't overdue from midnight. |
+| `dueDescription`     | `String` | Relative phrase: "Due today", "Due tomorrow", "Due in N days", "N days overdue". For timed lists due today it shows the time ("Due today at 5:00 PM" / "Overdue — was due 5:00 PM"). |
 
 These are derived on read, so they always reflect current item state and the
 current date without any stored duplication to keep in sync.
@@ -222,10 +224,11 @@ back, defaulting to `.blue` for any unrecognized value.
 `NotificationManager` ([Prepped/NotificationManager.swift](Prepped/NotificationManager.swift))
 derives everything it needs from the model — it stores nothing itself:
 
-- **Fire time** = the due day minus `reminderLeadDays`, set to **9:00 AM**
-  (constant `reminderHour`). The per-list `reminderLead` (`ReminderLead`:
-  none / 1 / 3 / 7 days) chooses the offset. If that moment has already passed,
-  it schedules shortly from now instead of skipping.
+- **Fire time** = the due day minus `reminderLeadDays`, set to the list's due
+  time-of-day when `hasTime` is true, otherwise **9:00 AM** (constant
+  `reminderHour`). The per-list `reminderLead` (`ReminderLead`: none / 1 / 3 / 7
+  days) chooses the offset. If that moment has already passed, it schedules
+  shortly from now instead of skipping.
 - **Whether to schedule** = only when `!isCompleted && !allItemsDone &&
   reminderLead != .none`.
 - **Identity** = `checklist.id.uuidString` as the request identifier, so a

@@ -67,45 +67,6 @@ struct ChecklistDetailView: View {
                 }
             }
 
-            if !checklist.isCompleted {
-                Section {
-                    HStack {
-                        Spacer()
-                        Button {
-                            // Warn if there's still open work; complete directly when all done.
-                            if checklist.allItemsDone || checklist.items.isEmpty {
-                                markComplete()
-                            } else {
-                                showingIncompleteWarning = true
-                            }
-                        } label: {
-                            Label("Mark Complete", systemImage: "checkmark.seal.fill")
-                                .font(.subheadline.weight(.medium))
-                        }
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.capsule)
-                        .tint(tint)
-                        // Not tappable while typing a new item, so a tap meant to
-                        // dismiss the keyboard can't accidentally complete the list.
-                        .disabled(addFieldFocused)
-                        Spacer()
-                    }
-                    .listRowBackground(Color.clear)
-                }
-            } else {
-                Section {
-                    Button {
-                        checklist.isCompleted = false
-                        NotificationManager.shared.reschedule(for: checklist)
-                    } label: {
-                        Label("Reopen List", systemImage: "arrow.uturn.backward")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(tint)
-                    .listRowBackground(Color.clear)
-                }
-            }
         }
         .navigationTitle(checklist.name)
         .navigationBarTitleDisplayMode(.large)
@@ -140,6 +101,28 @@ struct ChecklistDetailView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
+                    if !checklist.isCompleted {
+                        Button {
+                            // Warn if there's still open work; complete directly when all done.
+                            if checklist.allItemsDone || checklist.items.isEmpty {
+                                markComplete()
+                            } else {
+                                showingIncompleteWarning = true
+                            }
+                        } label: {
+                            Label("Mark Complete", systemImage: "checkmark.seal.fill")
+                        }
+                    } else {
+                        Button {
+                            checklist.isCompleted = false
+                            NotificationManager.shared.reschedule(for: checklist)
+                        } label: {
+                            Label("Reopen List", systemImage: "arrow.uturn.backward")
+                        }
+                    }
+
+                    Divider()
+
                     Button {
                         showingEdit = true
                     } label: {
@@ -206,7 +189,9 @@ struct ChecklistDetailView: View {
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(checklist.isOverdue && !checklist.isCompleted ? .red : tint)
 
-                Text(checklist.dueDate.formatted(.dateTime.weekday(.wide).month().day()))
+                Text(checklist.hasTime
+                     ? checklist.dueDate.formatted(.dateTime.weekday(.wide).month().day().hour().minute())
+                     : checklist.dueDate.formatted(.dateTime.weekday(.wide).month().day()))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
 

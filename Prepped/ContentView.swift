@@ -76,11 +76,19 @@ struct ContentView: View {
 
                 Group {
                     if activeChecklists.isEmpty {
-                        ContentUnavailableView(
-                            "No Lists Yet",
-                            systemImage: "checklist",
-                            description: Text("Tap + to add your first list.")
-                        )
+                        ContentUnavailableView {
+                            Label("No Lists Yet", systemImage: "checklist")
+                        } description: {
+                            Text("Create your first list to get started.")
+                        } actions: {
+                            Button {
+                                showingAdd = true
+                            } label: {
+                                Label("Create List", systemImage: "plus")
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .buttonBorderShape(.capsule)
+                        }
                     } else {
                         List {
                             if !overdueChecklists.isEmpty {

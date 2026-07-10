@@ -36,10 +36,21 @@ final class NotificationManager {
               checklist.reminderLead != .none else { return }
 
         let cal = Calendar.current
-        // Start from the due day, go back the chosen number of days, then set to 9 AM.
+        // Fire on the lead day at the due time-of-day (or 9 AM if the list has
+        // no specific time), i.e. `reminderLead` days before the due date.
         let dueDay = cal.startOfDay(for: checklist.dueDate)
+        let hour: Int
+        let minute: Int
+        if checklist.hasTime {
+            let comps = cal.dateComponents([.hour, .minute], from: checklist.dueDate)
+            hour = comps.hour ?? reminderHour
+            minute = comps.minute ?? 0
+        } else {
+            hour = reminderHour
+            minute = 0
+        }
         guard let leadDay = cal.date(byAdding: .day, value: -checklist.reminderLead.rawValue, to: dueDay),
-              let fireDate = cal.date(bySettingHour: reminderHour, minute: 0, second: 0, of: leadDay)
+              let fireDate = cal.date(bySettingHour: hour, minute: minute, second: 0, of: leadDay)
         else { return }
 
         // If that moment has already passed, fire shortly from now instead of skipping.
