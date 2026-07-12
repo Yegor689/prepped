@@ -11,42 +11,44 @@ struct AllListsView: View {
     private var completed: [Checklist] { checklists.filter { $0.isCompleted } }
 
     var body: some View {
-        List {
+        Group {
             if checklists.isEmpty {
                 ContentUnavailableView(
                     "No Lists",
                     systemImage: "tray",
                     description: Text("Lists you create will appear here.")
                 )
-            }
-
-            if !active.isEmpty {
-                Section("Active") {
-                    ForEach(active) { checklist in
-                        NavigationLink {
-                            ChecklistDetailView(checklist: checklist)
-                        } label: {
-                            ChecklistRow(checklist: checklist)
+            } else {
+                List {
+                    if !active.isEmpty {
+                        Section("Active") {
+                            ForEach(active) { checklist in
+                                NavigationLink {
+                                    ChecklistDetailView(checklist: checklist)
+                                } label: {
+                                    ChecklistRow(checklist: checklist)
+                                }
+                            }
                         }
                     }
-                }
-            }
 
-            if !completed.isEmpty {
-                Section("Completed") {
-                    ForEach(completed) { checklist in
-                        NavigationLink {
-                            ChecklistDetailView(checklist: checklist)
-                        } label: {
-                            ChecklistRow(checklist: checklist)
-                        }
-                        .swipeActions(edge: .leading) {
-                            Button {
-                                reopen(checklist)
-                            } label: {
-                                Label("Reopen", systemImage: "arrow.uturn.backward")
+                    if !completed.isEmpty {
+                        Section("Completed") {
+                            ForEach(completed) { checklist in
+                                NavigationLink {
+                                    ChecklistDetailView(checklist: checklist)
+                                } label: {
+                                    ChecklistRow(checklist: checklist)
+                                }
+                                .swipeActions(edge: .leading) {
+                                    Button {
+                                        reopen(checklist)
+                                    } label: {
+                                        Label("Reopen", systemImage: "arrow.uturn.backward")
+                                    }
+                                    .tint(.blue)
+                                }
                             }
-                            .tint(.blue)
                         }
                     }
                 }

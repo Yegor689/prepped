@@ -27,9 +27,17 @@ struct ChecklistDetailView: View {
     var body: some View {
         List {
             Section {
-                headerCard
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
+                // Tap the summary card to edit the list's details — a shortcut
+                // for the ⋯ menu's "Edit List Details".
+                Button {
+                    showingEdit = true
+                } label: {
+                    ChecklistHeaderCard(checklist: checklist)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Edit list details")
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
             }
 
             Section {
@@ -73,7 +81,10 @@ struct ChecklistDetailView: View {
         .tint(tint)
         .environment(\.editMode, $editMode)
         .scrollDismissesKeyboard(.interactively)
-        .onDisappear { addItem(keepFocus: false) }
+        .onDisappear {
+            addItem(keepFocus: false)
+            pruneEmptyItems()
+        }
         .overlay {
             if celebrate {
                 VStack(spacing: 8) {
@@ -138,12 +149,15 @@ struct ChecklistDetailView: View {
             }
             // Explicit keyboard dismissal — reliable, and no tap gesture on the
             // list competing with fields (which caused multi-tap-to-focus).
+            // Plain style + tint so it matches the item fields' UIKit "Done"
+            // accessory rather than rendering as a prominent bordered button.
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
                 Button("Done") {
                     addFieldFocused = false
                     for field in itemFields.values { field.resignFirstResponder() }
                 }
+                .tint(.indigo)
             }
         }
         .sheet(isPresented: $showingEdit) {
@@ -161,86 +175,6 @@ struct ChecklistDetailView: View {
         } message: {
             Text("\(checklist.totalItemCount - checklist.completedItemCount) of \(checklist.totalItemCount) items are still open. Complete this list anyway?")
         }
-    }
-
-    private var headerCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-        HStack(spacing: 16) {
-            ProgressRing(
-                progress: checklist.progress,
-                tint: tint,
-                size: 64,
-                lineWidth: 7,
-                centerText: checklist.totalItemCount > 0
-                    ? "\(Int(checklist.progress * 100))%"
-                    : nil,
-                isComplete: checklist.allItemsDone || checklist.isCompleted
-            )
-
-            VStack(alignment: .leading, spacing: 6) {
-                Label {
-                    if checklist.isCompleted {
-                        Text("Completed")
-                    } else {
-                        Text(checklist.dueDescription)
-                    }
-                } icon: {
-                    Image(systemName: checklist.isCompleted ? "checkmark.circle.fill"
-                          : (checklist.isOverdue ? "exclamationmark.circle.fill" : "calendar"))
-                }
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(checklist.isOverdue && !checklist.isCompleted ? .red : tint)
-
-                Text(checklist.hasTime
-                     ? checklist.dueDate.formatted(.dateTime.weekday(.wide).month().day().hour().minute())
-                     : checklist.dueDate.formatted(.dateTime.weekday(.wide).month().day()))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-
-                if checklist.totalItemCount > 0 {
-                    let remaining = checklist.totalItemCount - checklist.completedItemCount
-                    if checklist.allItemsDone {
-                        Text("All done 🎉")
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(.green)
-                    } else {
-                        Text("\(checklist.completedItemCount) of \(checklist.totalItemCount) done · \(remaining) left")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                if !checklist.isCompleted {
-                    HStack(spacing: 6) {
-                        Image(systemName: checklist.reminderLead == .none ? "bell.slash" : "bell")
-                            .frame(width: 16)
-                        Text(checklist.reminderLead == .none
-                             ? "No reminder"
-                             : "Reminder \(checklist.reminderLead.shortLabel)")
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-            }
-
-            Spacer(minLength: 0)
-        }
-
-        // Note is part of the card, connected via a hairline divider, italic, no icon.
-        if !checklist.notes.isEmpty {
-            Divider()
-                .overlay(tint.opacity(0.25))
-            Text(checklist.notes)
-                .font(.footnote)
-                .italic()
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        }
-        .padding(18)
-        .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 16))
-        .padding(.horizontal, 4)
-        .padding(.top, 4)
     }
 
     /// Items split into unchecked/checked, each in manual order, from a single
@@ -395,5 +329,13 @@ struct ChecklistDetailView: View {
         checklist.isCompleted = true
         NotificationManager.shared.cancel(for: checklist)
         dismiss()
+    }
+
+    /// Remove items left blank (e.g. a Return-inserted row the user never
+    /// filled in), so abandoned empty rows don't persist.
+    private func pruneEmptyItems() {
+        for item in checklist.items where item.title.trimmingCharacters(in: .whitespaces).isEmpty {
+            context.delete(item)
+        }
     }
 }

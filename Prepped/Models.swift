@@ -156,6 +156,16 @@ final class ListTemplate {
     var color: ListColor { ListColor(rawValue: colorName) ?? .blue }
     /// Item titles in manual order — the payload copied into a new checklist.
     var orderedItems: [TemplateItem] { items.sorted { $0.order < $1.order } }
+
+    /// One-line summary of the template's contents, e.g.
+    /// "3 items · Switch, Cable 1, cable 2" or "No items".
+    var itemSummary: String {
+        let count = items.count
+        guard count > 0 else { return "No items" }
+        let preview = orderedItems.prefix(3).map(\.title).joined(separator: ", ")
+        let suffix = count > 3 ? "…" : ""
+        return "\(count) item\(count == 1 ? "" : "s") · \(preview)\(suffix)"
+    }
 }
 
 /// A single item title within a `ListTemplate`. No done-state — templates are

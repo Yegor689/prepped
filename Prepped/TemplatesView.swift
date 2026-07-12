@@ -33,7 +33,7 @@ struct TemplatesView: View {
                         Button {
                             editingTemplate = template
                         } label: {
-                            templateRow(template)
+                            TemplateRow(template: template, accessory: .edit)
                         }
                         .tint(.primary)
                         .swipeActions(edge: .trailing) {
@@ -63,39 +63,5 @@ struct TemplatesView: View {
         .sheet(item: $editingTemplate) { template in
             TemplateFormView(existing: template)
         }
-    }
-
-    @ViewBuilder
-    private func templateRow(_ template: ListTemplate) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: "square.on.square")
-                .foregroundStyle(template.color.color)
-                .font(.title3)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(template.name)
-                    .font(.headline)
-                    .lineLimit(1)
-                Text(itemSummary(template))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 0)
-
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-        }
-        .padding(.vertical, 4)
-    }
-
-    private func itemSummary(_ template: ListTemplate) -> String {
-        let count = template.items.count
-        guard count > 0 else { return "No items" }
-        let preview = template.orderedItems.prefix(3).map(\.title).joined(separator: ", ")
-        let suffix = count > 3 ? "…" : ""
-        return "\(count) item\(count == 1 ? "" : "s") · \(preview)\(suffix)"
     }
 }

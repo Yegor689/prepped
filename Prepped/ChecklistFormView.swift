@@ -29,8 +29,6 @@ struct ChecklistFormView: View {
         return "Delivered at 9:00 AM, only if items remain unfinished."
     }
 
-    private let columns = [GridItem(.adaptive(minimum: 44), spacing: 12)]
-
     var body: some View {
         NavigationStack {
             Form {
@@ -52,27 +50,7 @@ struct ChecklistFormView: View {
                     }
                 }
                 Section("Color") {
-                    LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(ListColor.allCases) { option in
-                            Circle()
-                                .fill(option.color)
-                                .frame(width: 32, height: 32)
-                                .overlay {
-                                    if option == color {
-                                        Image(systemName: "checkmark")
-                                            .font(.system(size: 14, weight: .bold))
-                                            .foregroundStyle(.white)
-                                    }
-                                }
-                                .overlay {
-                                    Circle()
-                                        .stroke(.primary.opacity(option == color ? 0.4 : 0), lineWidth: 2)
-                                }
-                                .onTapGesture { color = option }
-                                .accessibilityLabel(option.label)
-                        }
-                    }
-                    .padding(.vertical, 4)
+                    ColorPickerGrid(selection: $color)
                 }
                 Section("Notes") {
                     TextField("Optional notes", text: $notes, axis: .vertical)

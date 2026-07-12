@@ -48,6 +48,9 @@ import SwiftData
     var body: some Scene {
         WindowGroup {
             ContentView()
+                // App-wide accent for chrome (nav, buttons). Per-list color still
+                // drives list-specific surfaces (progress ring, accent bar, and
+                // the detail screen, which re-tints itself).
                 .tint(.indigo)
         }
         .modelContainer(container)
@@ -72,6 +75,9 @@ struct ContentView: View {
     @State private var templateForNewList: ListTemplate?
     /// Whether the searchable "all templates" picker is showing.
     @State private var showingTemplatePicker = false
+    /// Template chosen inside the picker; consumed in the picker's onDismiss to
+    /// open the prefilled form after the picker is fully gone (race-free).
+    @State private var pickerSelection: ListTemplate?
 
     /// The last release tag whose What's New sheet the user has seen.
     @AppStorage("lastSeenWhatsNewTag") private var lastSeenWhatsNewTag = ""
@@ -185,16 +191,15 @@ struct ContentView: View {
             .sheet(item: $templateForNewList) { template in
                 ChecklistFormView(template: template)
             }
-            .sheet(isPresented: $showingTemplatePicker) {
-                TemplatePickerView { chosen in
-                    // Wait for the picker's dismiss animation to finish before
-                    // presenting the prefill form — presenting a sheet while
-                    // another is still animating out can silently drop the new
-                    // one.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                        templateForNewList = chosen
-                    }
+            .sheet(isPresented: $showingTemplatePicker, onDismiss: {
+                // Picker is fully gone now — safe to present the prefilled form
+                // without a sheet-over-sheet race (no delay needed).
+                if let picked = pickerSelection {
+                    pickerSelection = nil
+                    templateForNewList = picked
                 }
+            }) {
+                TemplatePickerView(selection: $pickerSelection)
             }
             .confirmationDialog(
                 "Delete this list?",
@@ -218,15 +223,7 @@ struct ContentView: View {
         }
         .onAppear {
             NotificationManager.shared.requestAuthorization()
-            // Show What's New once per release. Skip on a fresh install (no tag
-            // seen yet) so new users aren't greeted with a changelog — just
-            // mark the current release as seen.
-            if lastSeenWhatsNewTag.isEmpty {
-                lastSeenWhatsNewTag = WhatsNew.releaseTag
-            } else if lastSeenWhatsNewTag != WhatsNew.releaseTag {
-                showingWhatsNew = true
-                lastSeenWhatsNewTag = WhatsNew.releaseTag
-            }
+            maybeShowWhatsNew()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
@@ -263,70 +260,19 @@ struct ContentView: View {
         context.delete(checklist)
         pendingDelete = nil
     }
-}
 
-struct ChecklistRow: View {
-    let checklist: Checklist
-
-    private var tint: Color { checklist.color.color }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            // Red accent bar flags overdue lists at a glance.
-            RoundedRectangle(cornerRadius: 2)
-                .fill(checklist.isOverdue ? Color.red : Color.clear)
-                .frame(width: 4)
-
-            ProgressRing(
-                progress: checklist.progress,
-                tint: tint,
-                size: 44,
-                centerText: checklist.totalItemCount > 0
-                    ? "\(checklist.completedItemCount)/\(checklist.totalItemCount)"
-                    : nil,
-                isComplete: checklist.allItemsDone || checklist.isCompleted
-            )
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(checklist.name)
-                    .font(.headline)
-                    .lineLimit(1)
-
-                HStack(spacing: 6) {
-                    if checklist.isCompleted {
-                        Label(
-                            checklist.dueDate.formatted(.dateTime.month().day()),
-                            systemImage: "checkmark.circle.fill"
-                        )
-                        .foregroundStyle(.secondary)
-                    } else {
-                        Image(systemName: checklist.isOverdue ? "exclamationmark.circle.fill" : "calendar")
-                            .foregroundStyle(checklist.isOverdue ? .red : tint)
-                        Text(checklist.dueDescription)
-                            .foregroundStyle(checklist.isOverdue ? .red : .secondary)
-                    }
-                    if !checklist.notes.isEmpty {
-                        Image(systemName: "note.text")
-                            .foregroundStyle(.secondary)
-                            .accessibilityLabel("Has notes")
-                    }
-                }
-                .font(.subheadline)
-                .labelStyle(.titleAndIcon)
-            }
-
-            Spacer(minLength: 0)
-
-            if checklist.isOverdue {
-                Text("Overdue")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(.red)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.red.opacity(0.15), in: Capsule())
-            }
+    /// Show What's New once per release. It should reach *existing* users on the
+    /// update that introduces these features — so an empty stored tag counts as
+    /// "hasn't seen it" and still shows, as long as there's existing data (a
+    /// genuinely fresh install has no lists/templates and is silently caught up).
+    private func maybeShowWhatsNew() {
+        guard lastSeenWhatsNewTag != WhatsNew.releaseTag else { return }
+        let isFreshInstall = activeChecklists.isEmpty && templates.isEmpty
+            && lastSeenWhatsNewTag.isEmpty
+        if !isFreshInstall {
+            showingWhatsNew = true
         }
-        .padding(.vertical, 6)
+        lastSeenWhatsNewTag = WhatsNew.releaseTag
     }
 }
 

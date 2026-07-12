@@ -36,6 +36,9 @@ struct BackspaceTextField: UIViewRepresentable {
         field.setContentHuggingPriority(.defaultLow, for: .horizontal)
         field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         field.returnKeyType = .next
+        // A "Done" accessory so item fields (UIKit responders, outside SwiftUI's
+        // .keyboard toolbar) get the same dismiss affordance as the add field.
+        field.inputAccessoryView = context.coordinator.makeAccessory()
         onFieldAvailable(field)
         return field
     }
@@ -78,10 +81,17 @@ struct BackspaceTextField: UIViewRepresentable {
 
     final class Coordinator: NSObject, UITextFieldDelegate {
         var parent: BackspaceTextField
+        weak var field: UITextField?
+
         init(_ parent: BackspaceTextField) { self.parent = parent }
 
         @objc func textChanged(_ field: UITextField) {
+            self.field = field
             parent.text = field.text ?? ""
+        }
+
+        func textFieldDidBeginEditing(_ field: UITextField) {
+            self.field = field
         }
 
         func textFieldShouldReturn(_ field: UITextField) -> Bool {
@@ -92,6 +102,27 @@ struct BackspaceTextField: UIViewRepresentable {
                 field.resignFirstResponder()
             }
             return true
+        }
+
+        /// A keyboard accessory toolbar with a trailing "Done" button that
+        /// dismisses the keyboard — styled to match the add-item field's plain
+        /// SwiftUI "Done" (plain title, app tint) rather than the bold system
+        /// Done, so both fields look identical.
+        func makeAccessory() -> UIToolbar {
+            let bar = UIToolbar()
+            bar.sizeToFit()
+            let flex = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+            let done = UIBarButtonItem(title: "Done", style: .plain, target: self, action: #selector(dismissKeyboard))
+            // Tint the button itself (not just the bar) — iOS 26's glass keyboard
+            // buttons ignore the toolbar tintColor — so it matches the add
+            // field's indigo "Done".
+            done.tintColor = UIColor.systemIndigo
+            bar.items = [flex, done]
+            return bar
+        }
+
+        @objc private func dismissKeyboard() {
+            field?.resignFirstResponder()
         }
     }
 }
